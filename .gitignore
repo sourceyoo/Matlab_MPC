@@ -1,40 +1,91 @@
-# Autosave files
+#############################
+# MATLAB & Simulink Git Ignore
+#############################
+
+# --- MATLAB autosave / backup files ---
 *.asv
 *.m~
+*.slx~
+*.mdl~
 *.autosave
-*.slx.r*
-*.mdl.r*
 
-# Derived content-obscured files
-*.p
-
-# Compiled MEX files
-*.mex*
-
-# Packaged app and toolbox files
-*.mlappinstall
-*.mltbx
-
-# Deployable archives
-*.ctf
-
-# Generated helpsearch folders
-helpsearch*/
-
-# Code generation folders
+# --- Simulink local cache files ---
 slprj/
 sccprj/
+simulink_cache/
+simulinkCode/
 codegen/
 
-# Cache files
+# --- Simulink build artifacts (Embedded Coder / MATLAB Coder) ---
+*_ert_rtw/
+*_grt_rtw/
+*_remotebuild/
+*_slrealtime_rtw/
+*_cmr_rtw/
+*_slrt_rtw/
+rtwgen/
+
+# --- Local MATLAB preferences ---
+matlab.settings
+*.matlabWorks
+*.prj_backup/
+
+# --- OS / Editor files ---
+*.DS_Store
+Thumbs.db
+
+# --- Log files / tmp files ---
+*.log
+*.tmp
+*.bak
+
+# --- Message generation logs (특히 네 프로젝트의 msg_gen 폴더) ---
+control/matlab_msg_gen/glnxa64/log/
+control/matlab_msg_gen/win64/log/
+matlab_msg_gen/
+rosjava_build/
+rosmatlab/
+
+# --- ROS 2 / Custom msgs build artifacts ---
+build/
+devel/
+install/
+logs/
+
+# --- Python venv if used ---
+venv/
+__pycache__/
+
+# --- CMake/colcon (ROS2 등 사용 시) ---
+build/
+install/
+log/
+.colcon/
+CMakeCache.txt
+cmake_install.cmake
+CMakeFiles/
+
+# --- AUTOWARE (혹시 관련 패키지 포함 시) ---
+*.rviz
+.launch
+*.pcd
+
+# --- Project-specific ignore rules ---
+# diff 불가능한 binary 결과물 제외
 *.slxc
 
-# Cloud based storage dotfile
-.MATLABDriveTag
+# MATLAB project generated files (safe to include or exclude)
+resources/project/*backup*.mat
 
-# buildtool cache folder
-.buildtool/
+# Avoid accidental large binary datasets
+*.mat
+*.bag
+*.db3
+*.stl
+*.ply
+*.pcap
 
-# SimBiology backup files
-*.sbproj.backup
-*.sbproj.bak
+#############################
+# END OF FILE
+#############################
+
