@@ -1,0 +1,7 @@
+/home/yoo/Documents/MATLAB/MPC/control/matlab_msg_gen/glnxa64/build/autoware_auto_planning_msgs/rosidl_adapter/autoware_auto_planning_msgs:msg/OrderMovement.idl
+/home/yoo/Documents/MATLAB/MPC/control/matlab_msg_gen/glnxa64/build/autoware_auto_planning_msgs/rosidl_adapter/autoware_auto_planning_msgs:msg/Path.idl
+/home/yoo/Documents/MATLAB/MPC/control/matlab_msg_gen/glnxa64/build/autoware_auto_planning_msgs/rosidl_adapter/autoware_auto_planning_msgs:msg/PathPoint.idl
+/home/yoo/Documents/MATLAB/MPC/control/matlab_msg_gen/glnxa64/build/autoware_auto_planning_msgs/rosidl_adapter/autoware_auto_planning_msgs:msg/PathPointWithLaneId.idl
+/home/yoo/Documents/MATLAB/MPC/control/matlab_msg_gen/glnxa64/build/autoware_auto_planning_msgs/rosidl_adapter/autoware_auto_planning_msgs:msg/PathWithLaneId.idl
+/home/yoo/Documents/MATLAB/MPC/control/matlab_msg_gen/glnxa64/build/autoware_auto_planning_msgs/rosidl_adapter/autoware_auto_planning_msgs:msg/Trajectory.idl
+/home/yoo/Documents/MATLAB/MPC/control/matlab_msg_gen/glnxa64/build/autoware_auto_planning_msgs/rosidl_adapter/autoware_auto_planning_msgs:msg/TrajectoryPoint.idl

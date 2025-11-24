@@ -1,0 +1,32 @@
+function [data, info] = pathPoint
+%PathPoint gives an empty data for autoware_auto_planning_msgs/PathPoint
+% Copyright 2019-2021 The MathWorks, Inc.
+data = struct();
+data.MessageType = 'autoware_auto_planning_msgs/PathPoint';
+[data.pose, info.pose] = ros.internal.ros2.messages.geometry_msgs.pose;
+info.pose.MLdataType = 'struct';
+[data.longitudinal_velocity_mps, info.longitudinal_velocity_mps] = ros.internal.ros2.messages.ros2.default_type('single',1,0);
+[data.lateral_velocity_mps, info.lateral_velocity_mps] = ros.internal.ros2.messages.ros2.default_type('single',1,0);
+[data.heading_rate_rps, info.heading_rate_rps] = ros.internal.ros2.messages.ros2.default_type('single',1,0);
+[data.is_final, info.is_final] = ros.internal.ros2.messages.ros2.default_type('logical',1,0);
+info.MessageType = 'autoware_auto_planning_msgs/PathPoint';
+info.constant = 0;
+info.default = 0;
+info.maxstrlen = NaN;
+info.MaxLen = 1;
+info.MinLen = 1;
+info.MatPath = cell(1,14);
+info.MatPath{1} = 'pose';
+info.MatPath{2} = 'pose.position';
+info.MatPath{3} = 'pose.position.x';
+info.MatPath{4} = 'pose.position.y';
+info.MatPath{5} = 'pose.position.z';
+info.MatPath{6} = 'pose.orientation';
+info.MatPath{7} = 'pose.orientation.x';
+info.MatPath{8} = 'pose.orientation.y';
+info.MatPath{9} = 'pose.orientation.z';
+info.MatPath{10} = 'pose.orientation.w';
+info.MatPath{11} = 'longitudinal_velocity_mps';
+info.MatPath{12} = 'lateral_velocity_mps';
+info.MatPath{13} = 'heading_rate_rps';
+info.MatPath{14} = 'is_final';

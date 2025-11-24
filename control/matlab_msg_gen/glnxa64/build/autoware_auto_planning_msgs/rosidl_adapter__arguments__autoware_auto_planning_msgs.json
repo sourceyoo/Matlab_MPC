@@ -1,0 +1,12 @@
+{
+  "package_name": "autoware_auto_planning_msgs",
+  "non_idl_tuples": [
+    "/home/yoo/Documents/MATLAB/MPC/control/matlab_msg_gen/glnxa64/src/autoware_auto_planning_msgs:msg/OrderMovement.msg",
+    "/home/yoo/Documents/MATLAB/MPC/control/matlab_msg_gen/glnxa64/src/autoware_auto_planning_msgs:msg/Path.msg",
+    "/home/yoo/Documents/MATLAB/MPC/control/matlab_msg_gen/glnxa64/src/autoware_auto_planning_msgs:msg/PathPoint.msg",
+    "/home/yoo/Documents/MATLAB/MPC/control/matlab_msg_gen/glnxa64/src/autoware_auto_planning_msgs:msg/PathPointWithLaneId.msg",
+    "/home/yoo/Documents/MATLAB/MPC/control/matlab_msg_gen/glnxa64/src/autoware_auto_planning_msgs:msg/PathWithLaneId.msg",
+    "/home/yoo/Documents/MATLAB/MPC/control/matlab_msg_gen/glnxa64/src/autoware_auto_planning_msgs:msg/Trajectory.msg",
+    "/home/yoo/Documents/MATLAB/MPC/control/matlab_msg_gen/glnxa64/src/autoware_auto_planning_msgs:msg/TrajectoryPoint.msg"
+  ]
+}

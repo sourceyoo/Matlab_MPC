@@ -1,0 +1,19 @@
+// generated from rosidl_adapter/resource/msg.idl.em
+// with input from autoware_auto_planning_msgs/msg/Trajectory.msg
+// generated code does not contain a copyright notice
+
+#include "autoware_auto_planning_msgs/msg/TrajectoryPoint.idl"
+#include "std_msgs/msg/Header.idl"
+
+module autoware_auto_planning_msgs {
+  module msg {
+    @verbatim (language="comment", text=
+      "A set of trajectory points for the controller" "\n"
+      "CAPACITY=10000 (IDL ìí ì ë³´ë .msgìì íê¸° ë¶ê°)")
+    struct Trajectory {
+      std_msgs::msg::Header header;
+
+      sequence<autoware_auto_planning_msgs::msg::TrajectoryPoint> points;
+    };
+  };
+};

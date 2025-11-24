@@ -1,0 +1,29 @@
+function [data, info] = orderMovement
+%OrderMovement gives an empty data for autoware_auto_planning_msgs/OrderMovement
+% Copyright 2019-2021 The MathWorks, Inc.
+data = struct();
+data.MessageType = 'autoware_auto_planning_msgs/OrderMovement';
+[data.NOTSET, info.NOTSET] = ros.internal.ros2.messages.ros2.default_type('uint8',1,0, 0, [NaN]);
+[data.STOP, info.STOP] = ros.internal.ros2.messages.ros2.default_type('uint8',1,0, 1, [NaN]);
+[data.GO, info.GO] = ros.internal.ros2.messages.ros2.default_type('uint8',1,0, 2, [NaN]);
+[data.SLOWDOWN, info.SLOWDOWN] = ros.internal.ros2.messages.ros2.default_type('uint8',1,0, 3, [NaN]);
+[data.header, info.header] = ros.internal.ros2.messages.std_msgs.header;
+info.header.MLdataType = 'struct';
+[data.order_movement, info.order_movement] = ros.internal.ros2.messages.ros2.default_type('uint8',1,0);
+info.MessageType = 'autoware_auto_planning_msgs/OrderMovement';
+info.constant = 0;
+info.default = 0;
+info.maxstrlen = NaN;
+info.MaxLen = 1;
+info.MinLen = 1;
+info.MatPath = cell(1,10);
+info.MatPath{1} = 'NOTSET';
+info.MatPath{2} = 'STOP';
+info.MatPath{3} = 'GO';
+info.MatPath{4} = 'SLOWDOWN';
+info.MatPath{5} = 'header';
+info.MatPath{6} = 'header.stamp';
+info.MatPath{7} = 'header.stamp.sec';
+info.MatPath{8} = 'header.stamp.nanosec';
+info.MatPath{9} = 'header.frame_id';
+info.MatPath{10} = 'order_movement';

@@ -1,0 +1,18 @@
+{
+  "package_name": "autoware_auto_planning_msgs",
+  "output_dir": "/home/yoo/Documents/MATLAB/MPC/control/matlab_msg_gen/glnxa64/build/autoware_auto_planning_msgs/rosidl_generator_type_description/autoware_auto_planning_msgs",
+  "idl_tuples": [
+    "/home/yoo/Documents/MATLAB/MPC/control/matlab_msg_gen/glnxa64/build/autoware_auto_planning_msgs/rosidl_adapter/autoware_auto_planning_msgs:msg/OrderMovement.idl",
+    "/home/yoo/Documents/MATLAB/MPC/control/matlab_msg_gen/glnxa64/build/autoware_auto_planning_msgs/rosidl_adapter/autoware_auto_planning_msgs:msg/Path.idl",
+    "/home/yoo/Documents/MATLAB/MPC/control/matlab_msg_gen/glnxa64/build/autoware_auto_planning_msgs/rosidl_adapter/autoware_auto_planning_msgs:msg/PathPoint.idl",
+    "/home/yoo/Documents/MATLAB/MPC/control/matlab_msg_gen/glnxa64/build/autoware_auto_planning_msgs/rosidl_adapter/autoware_auto_planning_msgs:msg/PathPointWithLaneId.idl",
+    "/home/yoo/Documents/MATLAB/MPC/control/matlab_msg_gen/glnxa64/build/autoware_auto_planning_msgs/rosidl_adapter/autoware_auto_planning_msgs:msg/PathWithLaneId.idl",
+    "/home/yoo/Documents/MATLAB/MPC/control/matlab_msg_gen/glnxa64/build/autoware_auto_planning_msgs/rosidl_adapter/autoware_auto_planning_msgs:msg/Trajectory.idl",
+    "/home/yoo/Documents/MATLAB/MPC/control/matlab_msg_gen/glnxa64/build/autoware_auto_planning_msgs/rosidl_adapter/autoware_auto_planning_msgs:msg/TrajectoryPoint.idl"
+  ],
+  "include_paths": [
+    "builtin_interfaces:/usr/local/MATLAB/R2025b/sys/ros2/glnxa64/ros2/share/builtin_interfaces",
+    "geometry_msgs:/usr/local/MATLAB/R2025b/sys/ros2/glnxa64/ros2/share/geometry_msgs",
+    "std_msgs:/usr/local/MATLAB/R2025b/sys/ros2/glnxa64/ros2/share/std_msgs"
+  ]
+}

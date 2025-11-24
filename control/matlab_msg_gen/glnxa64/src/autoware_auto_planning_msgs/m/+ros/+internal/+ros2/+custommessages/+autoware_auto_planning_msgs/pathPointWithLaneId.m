@@ -1,0 +1,31 @@
+function [data, info] = pathPointWithLaneId
+%PathPointWithLaneId gives an empty data for autoware_auto_planning_msgs/PathPointWithLaneId
+% Copyright 2019-2021 The MathWorks, Inc.
+data = struct();
+data.MessageType = 'autoware_auto_planning_msgs/PathPointWithLaneId';
+[data.point, info.point] = ros.internal.ros2.custommessages.autoware_auto_planning_msgs.pathPoint;
+info.point.MLdataType = 'struct';
+[data.lane_ids, info.lane_ids] = ros.internal.ros2.messages.ros2.default_type('int64',NaN,0);
+info.MessageType = 'autoware_auto_planning_msgs/PathPointWithLaneId';
+info.constant = 0;
+info.default = 0;
+info.maxstrlen = NaN;
+info.MaxLen = 1;
+info.MinLen = 1;
+info.MatPath = cell(1,16);
+info.MatPath{1} = 'point';
+info.MatPath{2} = 'point.pose';
+info.MatPath{3} = 'point.pose.position';
+info.MatPath{4} = 'point.pose.position.x';
+info.MatPath{5} = 'point.pose.position.y';
+info.MatPath{6} = 'point.pose.position.z';
+info.MatPath{7} = 'point.pose.orientation';
+info.MatPath{8} = 'point.pose.orientation.x';
+info.MatPath{9} = 'point.pose.orientation.y';
+info.MatPath{10} = 'point.pose.orientation.z';
+info.MatPath{11} = 'point.pose.orientation.w';
+info.MatPath{12} = 'point.longitudinal_velocity_mps';
+info.MatPath{13} = 'point.lateral_velocity_mps';
+info.MatPath{14} = 'point.heading_rate_rps';
+info.MatPath{15} = 'point.is_final';
+info.MatPath{16} = 'lane_ids';
