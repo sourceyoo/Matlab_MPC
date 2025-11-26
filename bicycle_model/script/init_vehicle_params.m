@@ -1,21 +1,52 @@
 % --- init_vehicle_params.m ---
 
-% 1) 차량 파라미터 (ROS 기준과 일치시키기)
-rosParams = struct('wheel_base',     1.03, ...   % [m]
-                   'wheel_tread',    1.03, ...
-                   'front_overhang', 0.21, ...
-                   'rear_overhang',  0.19, ...
-                   'vehicle_mass',   250);
+%% Vehicle & Tire Parameters (car_sim URDF 기반)
 
-tireParams = struct('width',        0.175, ...
-                    'aspect_ratio', 0.60, ...
-                    'rim_diameter', 13);
+% ─────────────────────────────────────────────
+% 1) ROS / Vehicle Geometry Parameters
+%   - wheel_base      : 축간거리 [m]
+%   - wheel_tread     : 트레드(좌우 바퀴 중심 간 거리) [m]
+%   - front_overhang  : 앞 오버행 (앞바퀴 축 ~ 차 앞끝) [m]
+%   - rear_overhang   : 뒤 오버행 (뒷바퀴 축 ~ 차 뒤끝) [m]
+%   - vehicle_mass    : 차량 총 질량 [kg]
+% ─────────────────────────────────────────────
+rosParams = struct( ...
+    'wheel_base',     2.652, ...   % [m] 2 * half_wheelbase (1.326)
+    'wheel_tread',    1.60,  ...   % [m] rear track 기준 (2 * 0.8)
+    'front_overhang', 0.40,  ...   % [m] (총 길이 3.452 - wheelbase 2.652)/2
+    'rear_overhang',  0.40,  ...   % [m]
+    'vehicle_mass',   1820   ...   % [kg] body(1620) + wheels(160) + steer links(40)
+);
 
-assumptions = struct('cg_distribution_ratio',    0.5, ...
-                     'belt_compression_modulus',27e6, ...
-                     'belt_thickness',          0.015, ...
-                     'sidewall_deflection',     0.15, ...
-                     'reference_vertical_load', 3000);
+% ─────────────────────────────────────────────
+% 2) Tire Parameters (URDF + 합리적 가정)
+%   - width        : 타이어 단면 폭 [m]
+%   - aspect_ratio : 편평비 (모델용 가정치)
+%   - rim_diameter : 림 직경 [inch] (모델용 가정치)
+% ─────────────────────────────────────────────
+tireParams = struct( ...
+    'width',        0.25, ...  % [m] wheel_thickness = 0.25
+    'aspect_ratio', 0.60, ...  % 60 시리즈 타이어 가정
+    'rim_diameter', 16   ...   % [inch] 16인치 림 가정
+);
+
+% ─────────────────────────────────────────────
+% 3) Modeling Assumptions
+%   - cg_distribution_ratio   : 전/후륜 하중 분배 (예: 0.5 → 50:50)
+%   - belt_compression_modulus: 벨트 압축 탄성계수 [Pa]
+%   - belt_thickness          : 벨트 두께 [m]
+%   - sidewall_deflection     : 기준 하중에서의 사이드월 변형량 [m]
+%   - reference_vertical_load : 기준 수직하중 [N]
+%                               (여기서는 1820kg 차량의 1/4 하중 ≈ 4500N로 가정)
+% ─────────────────────────────────────────────
+assumptions = struct( ...
+    'cg_distribution_ratio',    0.5,   ...  % 50:50 가정
+    'belt_compression_modulus', 27e6,  ...  % [Pa]
+    'belt_thickness',           0.015, ...  % [m]
+    'sidewall_deflection',      0.15,  ...  % [m]
+    'reference_vertical_load',  4500   ...  % [N] ≈ 1820*9.81/4
+);
+
 
 % 2) vehicleParams (필요하면 사용)
 vehicleParams = vehi_param(rosParams, tireParams, assumptions);
