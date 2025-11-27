@@ -1,148 +1,179 @@
 function J = mpc_cost_fun(x)
-
-
     % x : bayesopt에서 넘어오는 파라미터 구조체
     %     사용 필드: Qy, Qpsi, Rdelta
     %     (Np, Nc는 여기서 고정값 사용)
-
-    %=============================
-    % 0) Horizon 고정 (v = 3 m/s, Ts = 0.05s 기준)
-    %=============================
-    Np_fixed = 30;   % prediction horizon (≈ 1.5 s)
-    Nc_fixed = 6;    % control horizon   (Np의 1/5)
-
-    % (2) 조향각 최대값 [deg] — 하드웨어 스펙 반영
-    dmax_deg_fixed = 27;   % servo/steering 최대 조향각 ±27도
     
+    %=============================
+    % 0) Horizon 및 하드웨어 제약 고정
+    %=============================
+    Np_fixed       = 60;    % prediction horizon
+    Nc_fixed       = 12;    % control horizon
+    dmax_deg_fixed = 27;    % 최대 조향 각 [deg]
+
+    %==========================================================
+    % 0-1) [핵심 변경] 워커별 1회 초기화 & 구조체 저장
+    %      매번 run을 하지 않고, 첫 실행 때만 변수를 메모리에 저장
+    %==========================================================
+    persistent staticVars
+    if isempty(staticVars)
+        % 1. 초기화 스크립트 실행 (변수들이 이 함수 workspace에 생성됨)
+        run('init_vehicle_params.m');
+        
+        % 2. 생성된 변수들을 구조체(staticVars)에 백업
+        %    (init_vehicle_params.m에 있는 변수 리스트를 모두 등록)
+        s = struct();
+        
+        % 필수 변수들 체크 및 저장
+        if exist('rosParams', 'var'),     s.rosParams     = rosParams;     end
+        if exist('tireParams', 'var'),    s.tireParams    = tireParams;    end
+        if exist('assumptions', 'var'),   s.assumptions   = assumptions;   end
+        if exist('vehicleParams', 'var'), s.vehicleParams = vehicleParams; end
+        
+        % L (휠베이스) 처리
+        if exist('L', 'var')
+            s.L = L;
+        elseif isfield(s, 'vehicleParams') && isfield(s.vehicleParams, 'a')
+            s.L = s.vehicleParams.a + s.vehicleParams.b;
+        else
+            error('L 또는 vehicleParams가 정의되지 않았습니다.');
+        end
+        
+        % 기타 주행 파라미터 저장
+        if exist('delta_max', 'var'), s.delta_max = delta_max; end
+        if exist('a_max', 'var'),     s.a_max     = a_max;     end
+        if exist('v0', 'var'),        s.v0        = v0;        end
+        if exist('x0', 'var'),        s.x0        = x0;        end
+        if exist('y0', 'var'),        s.y0        = y0;        end
+        if exist('psi0', 'var'),      s.psi0      = psi0;      end
+        if exist('Ts', 'var'),        s.Ts        = Ts;        end
+        
+        % persistent 변수에 저장 (다음 호출부터는 이 블록 건너뜀)
+        staticVars = s;
+        
+        % Fast Restart를 위해 모델 한 번 로드
+        load_system('bicycle_kinematic');
+    end
+    
+    %=============================
     % 1) SimulationInput 객체 생성
+    %=============================
     simIn = Simulink.SimulationInput('bicycle_kinematic');
     
-    % 2) 파라미터 주입 (MPC 내부에서 쓸 Q,R,Np,Nc,dmax)
+    %=============================
+    % 2) [변경] 모든 변수를 setVariable로 주입
+    %    (Base Workspace 의존성 제거 -> FastRestart 호환성 확보)
+    %=============================
+    
+    % 2-1. 최적화 변수 (Bayesopt에서 옴)
     simIn = simIn.setVariable('Qy',       x.Qy);
     simIn = simIn.setVariable('Qpsi',     x.Qpsi);
     simIn = simIn.setVariable('Rdelta',   x.Rdelta);
-    % 👉 여기서 Np, Nc를 고정값으로 주입
+    
+    % 2-2. 고정 제어 변수
     simIn = simIn.setVariable('Np',       Np_fixed);
     simIn = simIn.setVariable('Nc',       Nc_fixed);
-    % 👉 dmax_deg도 고정값 사용
     simIn = simIn.setVariable('dmax_deg', dmax_deg_fixed);
     
-    % 3) 시뮬레이션 설정
-    simIn = simIn.setModelParameter('StopTime', '10');
-    simIn = simIn.setModelParameter('SaveOutput', 'off');
-    simIn = simIn.setModelParameter('SaveState', 'off');
-    simIn = simIn.setModelParameter('SaveFormat', 'Dataset'); 
+    % 2-3. 초기화 스크립트에서 가져온 정적 변수들 일괄 주입
+    %      (staticVars 구조체에 있는 모든 필드를 simIn에 넣음)
+    fields = fieldnames(staticVars);
+    for i = 1:numel(fields)
+        varName = fields{i};
+        simIn = simIn.setVariable(varName, staticVars.(varName));
+    end
     
+    %=============================
+    % 3) 시뮬레이션 설정 (Fast Restart ON)
+    %=============================
+    simIn = simIn.setModelParameter('StopTime',    '10');
+    simIn = simIn.setModelParameter('SaveOutput',  'off');
+    simIn = simIn.setModelParameter('SaveState',   'off');
+    simIn = simIn.setModelParameter('SaveFormat',  'Dataset'); 
+    simIn = simIn.setModelParameter('FastRestart', 'on'); 
+    % setVariable을 썼으므로 SrcWorkspace는 기본값이어도 되지만 명확히 함
+    
+    %=============================
     % 4) 시뮬레이션 실행
-    simOut = sim(simIn); 
-    
-    % 5) 에러 처리
-    if simOut.ErrorMessage
-        J = NaN; 
+    %=============================
+    try
+        simOut = sim(simIn); 
+    catch ME
+        warning('Simulink 실행 실패: %s', ME.message);
+        J = 1e9; % 실패 시 매우 큰 비용
         return;
     end
     
-    % 6) 로그 꺼내기
-    logs = simOut.logsout;
-    
-    Yref_ts  = logs.get('Y_ref').Values;
-    Y_ts     = logs.get('Y').Values;
-    delta_ts = logs.get('delta_cmd').Values;
-
-    % (있다면) yaw 에러도 같이 꺼내기
-    hasPsi = false;
-    try
-        psi_ref_ts = logs.get('psi_ref').Values;
-        psi_ts     = logs.get('psi').Values;
-        hasPsi = true;
-    catch
-        hasPsi = false;
+    % 5) 에러 처리 (Simulink 내부 에러)
+    if simOut.ErrorMessage
+        J = 1e9; 
+        return;
     end
     
-    % 7) 타임/데이터 벡터 준비
+    %=============================
+    % 6) 로그 꺼내기 및 데이터 처리
+    %=============================
+    logs = simOut.logsout;
+    
+    % 데이터 추출 (try-catch 없이 필수 신호는 존재한다고 가정)
+    % 만약 신호 이름이 다르면 여기서 수정 필요
+    try
+        Yref_ts  = logs.get('Y_ref').Values;
+        Y_ts     = logs.get('Y').Values;
+        delta_ts = logs.get('delta_cmd').Values;
+    catch
+        warning('필수 로그 신호(Y, Y_ref, delta_cmd)를 찾을 수 없습니다.');
+        J = 1e9; return;
+    end
+    
     t  = Y_ts.Time;
     Y  = Y_ts.Data;
     Yr = Yref_ts.Data;
     d  = delta_ts.Data;
     
-    Ts = mean(diff(t));
-    if isnan(Ts) || isempty(Ts) || Ts <= 0
-        Ts = 0.01; 
-    end 
-    
-    %==================================================================
-    %   8) 상태/입력 에러 정의
-    %==================================================================
-    % 상태 1: 횡방향 오차 e_y
-    e_y = Yr - Y;                % e_y(t)
-    
-    % 상태 2: yaw 오차 e_psi (있으면 사용, 없으면 0으로 둠)
-    if hasPsi
-        e_psi = psi_ref_ts.Data - psi_ts.Data;
+    % 샘플링 타임 계산 (로그 기반)
+    if length(t) > 1
+        Ts_log = mean(diff(t));
     else
-        e_psi = zeros(size(e_y));
+        Ts_log = staticVars.Ts; % 로그가 너무 짧으면 설정값 사용
     end
-
-    % 입력: 조향각 변화율 ≈ d_dot
-    dd    = diff(d) / Ts;        % d_dot(t_k) ≈ (d_k - d_{k-1})/Ts
-    t_dd  = t(2:end);
-
-    %==================================================================
-    %   9) Q,R 기반 stage cost 계산
-    %==================================================================
-    % Q = diag(Qy, Qpsi), R = Rdelta 라고 보는 것
-    Qy     = x.Qy;
-    Qpsi   = x.Qpsi;
-    Rdelta = x.Rdelta;
-
-    % 상태 비용: e_y^2, e_psi^2에 Qy, Qpsi 가중
-    L_state = Qy   * (e_y.^2) + ...
-              Qpsi * (e_psi.^2);
-
-    % 입력 비용: (1) 조향각 변화율 + (2) 절대 조향각 둘 다 패널티
-    Rdelta_rate = Rdelta;          % 기존 Rdelta는 rate에
-    Rdelta_abs  = 0.1 * Rdelta;    % 절대값용은 조금 더 작게
     
-    % 9-1) rate 비용 (dd: 길이 N-1, t_dd 사용)
-    L_rate  = Rdelta_rate * (dd.^2);
-    J_rate  = trapz(t_dd, L_rate);
-
-    % 9-2) absolute 비용 (d: 길이 N, t 사용)
-    L_abs   = Rdelta_abs  * (d.^2);
-    J_abs   = trapz(t,    L_abs);
-
-    % 시간 적분 (연속시간 근사)
-    J_state = trapz(t,    L_state);   % ∫ x^T Q x dt
-    % 최종 입력 비용
-    J_input = J_rate + J_abs;
-
     %==================================================================
-    %  10) Terminal Cost: P * x_T^2  (여기선 e_y, e_psi만 사용)
+    % 8) 평가용 에러 정의 (Evaluation Metrics)
     %==================================================================
-    % P_y, P_psi는 별도 튜닝 파라미터로 둘 수도 있고,
-    % 간단히 Qy, Qpsi와 동일하게 둘 수도 있음.
-    P_y   = Qy;      % 혹은 고정 상수/별도 변수로 바꿔도 됨
-    P_psi = Qpsi;    % yaw도 중요하게 보려면 이렇게
-
-    e_y_final   = e_y(end);
-    e_psi_final = e_psi(end);
-
-    J_terminal = P_y   * (e_y_final^2) + ...
-                 P_psi * (e_psi_final^2);
-
+    e_y = Yr - Y;                % 횡방향 오차
+    
+    if length(d) > 1
+        dd  = diff(d) / Ts_log;  % 조향각 변화율 (Steering Rate)
+    else
+        dd = 0;
+    end
+    
     %==================================================================
-    %  11) Soft Constraint: 차선 이탈 패널티 (슬랙 변수 느낌)
+    % 9) Secondary Cost Function (고정 Alpha 기반 평가)
     %==================================================================
-    abs_e = abs(e_y);
-    over1 = max(0, abs_e - 1);   % |e_y| > 1인 구간만
-    pen   = over1.^2;
-
-    lambda_pen = 10.0;           % 슬랙 가중치 (고정 상수)
-    J_pen = lambda_pen * trapz(t, pen);
-
+    alpha_tracking  = 1.0;   % 경로 추종 중요도
+    alpha_stability = 5.0;   % 핸들 급조작(안정성) 중요도
+    
+    % 1. Tracking Cost
+    cost_tracking = alpha_tracking * trapz(t, e_y.^2);
+    
+    % 2. Stability Cost
+    if length(t) > 1
+        cost_stability = alpha_stability * trapz(t(2:end), dd.^2);
+    else
+        cost_stability = 0;
+    end
+    
+    % 3. Constraint Penalty (차선 이탈)
+    max_ey = max(abs(e_y));
+    if max_ey > 1.0
+        penalty = 1e5;
+    else
+        penalty = 0;
+    end
+    
     %==================================================================
-    %  12) 최종 비용 합산 (Q,R,P 스타일 + soft constraint)
+    % 10) 최종 반환 비용
     %==================================================================
-    J = J_state + J_input + J_pen + J_terminal;
-
+    J = cost_tracking + cost_stability + penalty;
 end
