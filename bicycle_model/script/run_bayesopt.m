@@ -1,45 +1,52 @@
 function run_bayesopt
-    % [안전 모드] BAYESOPT 실행 스크립트 (논문 기반 튜닝 적용)
-    % 하드웨어 보호 및 최적화 효율성 강화 버전
+    % [Step Response 최적화] 게걸음 완벽 차단 + 빠른 응답 + 문법 오류 수정
     
-    % 0. 재현성 시드 설정
+    % 0. 초기화
     rng(1);   
     
-    % =========================================================================
-    % 1. [하드웨어 안전장치] 병렬 워커(Worker) 수 제한
-    % =========================================================================
+    % 1. 병렬 워커 설정
     logicalCores = feature('numcores');
-    safeWorkerCount = 2; % 절반만 사용
+    safeWorkerCount = 4; % PC 성능에 따라 조절
     
     pool = gcp('nocreate');
-    if ~isempty(pool)
-        delete(pool);
-    end
+    if ~isempty(pool), delete(pool); end
     
-    fprintf('>>> 안전 모드 가동: 코어 %d개 중 %d개만 사용합니다.\n', logicalCores, safeWorkerCount);
-    parpool(safeWorkerCount); 
-
+    fprintf('>>> 최적화 시작: 코어 %d개 중 %d개 사용\n', logicalCores, safeWorkerCount);
+    pool = parpool(safeWorkerCount); 
+    
+    % [수정] 파일 배포는 bayesopt 옵션이 아니라, pool에 직접 명령해야 합니다.
+    % 워커들이 필요한 파일들을 미리 전송합니다.
+    addAttachedFiles(pool, {'mpc_cost_fun.m', 'init_vehicle_params.m', 'bicycle_kinematic.slx'});
+    
+    % 실시간 로그용 무전기 생성
+    q = parallel.pool.DataQueue;
+    afterEach(q, @(msg) fprintf('%s\n', msg)); 
     
     % =========================================================================
-    % 2. 최적화 변수 정의 (MPC 내부 제어용 가중치)
+    % 2. [게걸음 방지용 튜닝 범위]
     % =========================================================================
-    Qy_var      = optimizableVariable('Qy',       [0.1, 200], 'Transform','log');
-    Qpsi_var    = optimizableVariable('Qpsi',     [0.1, 200], 'Transform','log');
-    Rdelta_var  = optimizableVariable('Rdelta',   [0.01, 50], 'Transform','log'); 
-    % (Tip: Rdelta 하한을 조금 더 낮춰서 공격적인 제어도 탐색하게 함)
+    
+    % (1) Qy (위치): 1m 도달 속도 확보 (최소 10 이상)
+    Qy_var   = optimizableVariable('Qy',   [10, 1000], 'Transform','log'); 
+    
+    % (2) Qpsi (헤딩): 하한 0.5 (정렬 강제), 상한 20 (진동 억제 여유)
+    Qpsi_var = optimizableVariable('Qpsi', [0.5, 20], 'Transform','log'); 
+    
+    % (3) Rdelta (핸들 댐핑)
+    Rdelta_var = optimizableVariable('Rdelta', [0.1, 50], 'Transform','log');
     
     vars = [Qy_var; Qpsi_var; Rdelta_var];
 
     % =========================================================================
-    % 3. bayesopt 실행 (안전 옵션 + 알고리즘 강화)
+    % 3. 최적화 실행
     % =========================================================================
-    % [중요] 여기서 호출하는 @mpc_cost_fun은 
-    % 반드시 "고정된 Alpha 가중치"로 평가하는 함수여야 합니다.
+    costFcn = @(x) mpc_cost_fun(x, q);
     
     try
-        fprintf('>>> 최적화 시작... (최대 300회)\n');
+        fprintf('>>> 최적화 시작... (Heading Tolerance 0.5도)\n');
         
-        results = bayesopt(@mpc_cost_fun, vars, ...
+        % [수정] 'AttachedFiles' 옵션 삭제 (여기 있으면 에러남)
+        results = bayesopt(costFcn, vars, ...
             'MaxObjectiveEvaluations', 300, ...    
             'IsObjectiveDeterministic', true, ...
             'AcquisitionFunctionName', 'expected-improvement-plus', ...
@@ -48,31 +55,16 @@ function run_bayesopt
             'SaveFileName', 'bayesopt_checkpoint.mat', ...
             'PlotFcn', {@plotMinObjective, @plotElapsedTime});
             
-        % 4. 결과 처리
         bestPoint = results.XAtMinObjective;
-        minObjective = results.MinObjective;
-        
         fprintf('\n--- 최적 파라미터 발견 ---\n');
         disp(bestPoint);
-        fprintf('최소 비용(J): %.4f\n', minObjective);
-        
         save('best_mpc_params.mat', 'bestPoint', 'results');
         
     catch ME
-       fprintf('\n!!! 에러 발생 (상세 리포트) ==============================\n');
-        % 전체 스택 + 원인까지 출력
-        disp(getReport(ME, 'extended', 'hyperlinks', 'off'));
-    
-        % 혹시 내부 cause에 워커 쪽 에러가 들어있으면 한 번 더 풀어서 봄
-        if ~isempty(ME.cause)
-            fprintf('\n--- 내부 cause(1) 리포트 ---\n');
-            disp(getReport(ME.cause{1}, 'extended', 'hyperlinks', 'off'));
-        end
-
-        save('bayesopt_crash_dump.mat'); % 현재 상태라도 저장
+       fprintf('\n!!! 에러 발생 !!!\n');
+       disp(getReport(ME));
+       save('bayesopt_crash_dump.mat'); 
     end
     
-    % 5. [안전 종료] 병렬 풀 정리 (에러가 나도 실행됨)
     delete(gcp('nocreate'));
-    fprintf('>>> 리소스 정리 완료. 프로그램 종료.\n');
 end
