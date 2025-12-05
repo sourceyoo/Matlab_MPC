@@ -1,6 +1,6 @@
 function [J, metrics] = mpc_cost_fun(x, q)
     % --------------------------------
-    % [Universal Cost Function]
+    % [Universal Cost Fution]
     % Step, Sine, Ramp 등 다양한 경로 추종을 위한 통합 비용 함수
     % ITAE(시간 가중 오차 적분)를 적용하여 정착 시간과 추종 오차를 동시에 최소화
     % 또한, 상세 성능 지표(RMSE, Settling Time 등)를 반환하여 분석을 용이하게 함
@@ -12,9 +12,9 @@ function [J, metrics] = mpc_cost_fun(x, q)
     % 0. 제어 및 하드웨어 제약 조건 설정
     % (최적화 대상이 아닌 고정된 상수값 정의)
     % --------------------------------
-    Np_fixed       = 120;    % 예측 구간 (Prediction Horizon) - 시야 대폭 확장 (80->120)
-    Nc_fixed       = 24;     % 제어 구간 (Control Horizon) - 제어 자유도 확보
-    dmax_deg_fixed = 27;     % 차량의 최대 조향각 한계
+    Np_fixed       = 60;    % 예측 구간 (Prediction Horizon) - 시야 대폭 확장 (80->120)
+    Nc_fixed       = 10;     % 제어 구간 (Control Horizon) - 제어 자유도 확보
+    dmax_deg_fixed = 2;     % 차량의 최대 조향각 한계
 
     % --------------------------------
     % 1. 초기화 및 모델 로드 (속도 최적화)
@@ -165,31 +165,34 @@ function [J, metrics] = mpc_cost_fun(x, q)
     % (1) Tracking Accuracy (ITAE 기법)
     % 시간이 갈수록(t) 가중치를 높여, 후반부의 미세한 오차를 강력하게 처벌함.
     % Step에서는 빠른 정착을, Sine에서는 위상 지연(Lag) 감소를 유도.
-    cost_tracking = trapz(t, (e_y.^2) .* (1 + t)); 
+    cost_tracking = trapz(t, (e_y.^2) .* (1 + t));  
     
     % (2) Heading Alignment (게걸음 방지)
     % 목표 헤딩과 실제 헤딩이 다르면 페널티 부여.
-    cost_heading = 50 * trapz(t, e_psi.^2);
+    cost_heading = 100 * trapz(t, e_psi.^2);
     
     % (3) Terminal Cost (종단 비용) - [핵심]
     % 시뮬레이션의 '마지막 순간'에 오차가 남아있으면 가중치 10,000배 부여
     % -> MPC가 "시간 내에 무조건 도달해야 한다"는 압박을 받음
     terminal_error = e_y(end)^2 + e_psi(end)^2;
-    cost_terminal = 10000 * terminal_error;
+    cost_terminal = 100 * terminal_error;
     
     % (4) Stability (핸들 댐핑) - [핵심]
     % 조향각의 급격한 변화율(dd)을 억제하여 부드러운 주행 유도 (진동 억제)
     % 가중치 100배로 상향하여 묵직한 핸들링 유도
     if length(d) > 1
         dd = diff(d) / mean(diff(t));
-        cost_stability = 100 * trapz(t(2:end), dd.^2); 
+        cost_stability = 500 * trapz(t(2:end), dd.^2); 
     else
         cost_stability = 0;
     end
     
     % (5) Worst-Case Penalty (안전 장치)
     % 차량이 경로에서 1.5m 이상 크게 벗어나면 즉시 실격 처리(폭탄 비용)
-    penalty = (max_dev > 1.5) * 1e5;
+    lane_margin = 0.3;  % 허용하려는 lateral 오차 (일단 0.3m 정도부터 시작)
+    violation = max(0, abs(e_y) - lane_margin);   % 0.3m 넘어간 부분만
+    
+    cost_lane = 1e6 * trapz(t, violation.^2);     % 계수는 나중에 조정
     
     % (6) Peak Error Penalty
     % 오버슈트나 코너링 시 최대 쏠림량을 줄이도록 유도
@@ -198,16 +201,23 @@ function [J, metrics] = mpc_cost_fun(x, q)
     % --------------------------------
     % 최종 비용 합산
     % --------------------------------
-    J = cost_tracking + cost_heading + cost_terminal + cost_stability + cost_peak + penalty;
+    J = cost_tracking + cost_heading + cost_terminal + cost_stability + cost_peak + cost_lane;
 
     % --------------------------------
     % 7. 실시간 로그 전송 (Reporting)
     % (run_bayesopt 화면에 현재 상태를 출력하기 위함)
-    % --------------------------------
     if ~isempty(q)
-        try, wID = labindex; catch, wID = 1; end
+        % 병렬 워커 ID 확인
+        t = getCurrentTask();
+        if isempty(t)
+            wID = 1;  % 싱글 실행
+        else
+            wID = t.ID;  % 워커 번호
+        end
+    
         msg = sprintf('[W%d] RMSE:%.3f | T_set:%.2fs | MaxErr:%.3f | Qy:%.1f, Qp:%.1f, Rd:%.1f', ...
                       wID, rmse, t_settle, max_dev, x.Qy, x.Qpsi, x.Rdelta);
         send(q, msg);
     end
+
 end

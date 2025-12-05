@@ -68,9 +68,9 @@ Ts = 0.05;
 Qy = 1;
 Qpsi = 1;
 Rdelta = 1;
-Np = 10;
-Nc = 3;
-dmax_deg = 27.0;
+Np = 1;
+Nc = 1;
+dmax_deg = 2.0;
 
 
 % 이 스크립트를 실행하면 base workspace에

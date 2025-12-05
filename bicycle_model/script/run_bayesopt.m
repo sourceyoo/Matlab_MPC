@@ -7,7 +7,7 @@ function run_bayesopt
     
     % 1. 병렬 워커 설정
     logicalCores = feature('numcores');
-    safeWorkerCount = 6; % PC 사양에 맞게 조절
+    safeWorkerCount = 5; % PC 사양에 맞게 조절
     
     pool = gcp('nocreate');
     if ~isempty(pool), delete(pool); end
@@ -26,13 +26,13 @@ function run_bayesopt
     % 2. 튜닝 범위 설정 (강력한 반응성 + 진동 억제)
     % =========================================================================
     % Qy: 50 이상으로 설정하여 1m 도달 반응성 극대화
-    Qy_var   = optimizableVariable('Qy',   [50, 1000], 'Transform','log'); 
+    Qy_var   = optimizableVariable('Qy',   [50, 300], 'Transform','log'); 
     
     % Qpsi: 게걸음 방지(0.5) 및 곡선 추종(20)
-    Qpsi_var = optimizableVariable('Qpsi', [0.5, 20], 'Transform','log'); 
+    Qpsi_var = optimizableVariable('Qpsi', [2, 100], 'Transform','log'); 
     
     % Rdelta: 10~25로 좁게 설정하여 확실한 댐핑(진동 억제) 유도
-    Rdelta_var = optimizableVariable('Rdelta', [10, 25], 'Transform','log');
+    Rdelta_var = optimizableVariable('Rdelta', [10, 50], 'Transform','log');
     
     vars = [Qy_var; Qpsi_var; Rdelta_var];
 
