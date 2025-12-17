@@ -10,8 +10,8 @@ function init_mpc_params()
 
     % 3) MPC 구조/하드웨어에 맞게 고정하는 값들
     Np_fixed       = 30;   % prediction horizon
-    Nc_fixed       = 6;    % control horizon
-    dmax_deg_fixed = 2;   % 최대 조향각 [deg]
+    Nc_fixed       = 5;    % control horizon
+    dmax_deg_fixed = 7;   % 최대 조향각 [deg]
 
     assignin('base','Np',       Np_fixed);
     assignin('base','Nc',       Nc_fixed);

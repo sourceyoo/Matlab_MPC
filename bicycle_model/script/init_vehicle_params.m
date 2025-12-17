@@ -1,79 +1,77 @@
 % --- init_vehicle_params.m ---
-
-%% Vehicle & Tire Parameters (car_sim URDF 기반)
-
+%% Vehicle & Tire Parameters (Rear Axle Reference)
 % ─────────────────────────────────────────────
 % 1) ROS / Vehicle Geometry Parameters
-%   - wheel_base      : 축간거리 [m]
-%   - wheel_tread     : 트레드(좌우 바퀴 중심 간 거리) [m]
-%   - front_overhang  : 앞 오버행 (앞바퀴 축 ~ 차 앞끝) [m]
-%   - rear_overhang   : 뒤 오버행 (뒷바퀴 축 ~ 차 뒤끝) [m]
-%   - vehicle_mass    : 차량 총 질량 [kg]
 % ─────────────────────────────────────────────
 rosParams = struct( ...
-    'wheel_base',     2.652, ...   % [m] 2 * half_wheelbase (1.326)
-    'wheel_tread',    1.60,  ...   % [m] rear track 기준 (2 * 0.8)
-    'front_overhang', 0.40,  ...   % [m] (총 길이 3.452 - wheelbase 2.652)/2
+    'wheel_base',     2.652, ...   % [m] 축간거리 (L)
+    'wheel_tread',    1.60,  ...   % [m] 윤거
+    'front_overhang', 0.40,  ...   % [m]
     'rear_overhang',  0.40,  ...   % [m]
-    'vehicle_mass',   1820   ...   % [kg] body(1620) + wheels(160) + steer links(40)
+    'vehicle_mass',   1820   ...   % [kg] 차량 총 질량
 );
 
 % ─────────────────────────────────────────────
-% 2) Tire Parameters (URDF + 합리적 가정)
-%   - width        : 타이어 단면 폭 [m]
-%   - aspect_ratio : 편평비 (모델용 가정치)
-%   - rim_diameter : 림 직경 [inch] (모델용 가정치)
+% 2) Tire Parameters
 % ─────────────────────────────────────────────
 tireParams = struct( ...
-    'width',        0.25, ...  % [m] wheel_thickness = 0.25
-    'aspect_ratio', 0.60, ...  % 60 시리즈 타이어 가정
-    'rim_diameter', 16   ...   % [inch] 16인치 림 가정
+    'width',        0.25, ...  % [m]
+    'aspect_ratio', 0.60, ...  % 60 시리즈
+    'rim_diameter', 16   ...   % [inch]
 );
 
 % ─────────────────────────────────────────────
 % 3) Modeling Assumptions
-%   - cg_distribution_ratio   : 전/후륜 하중 분배 (예: 0.5 → 50:50)
-%   - belt_compression_modulus: 벨트 압축 탄성계수 [Pa]
-%   - belt_thickness          : 벨트 두께 [m]
-%   - sidewall_deflection     : 기준 하중에서의 사이드월 변형량 [m]
-%   - reference_vertical_load : 기준 수직하중 [N]
-%                               (여기서는 1820kg 차량의 1/4 하중 ≈ 4500N로 가정)
 % ─────────────────────────────────────────────
 assumptions = struct( ...
-    'cg_distribution_ratio',    0.5,   ...  % 50:50 가정
+    'cg_distribution_ratio',    0.5,   ...  % (참고용) Izz 계산 등에 사용
     'belt_compression_modulus', 27e6,  ...  % [Pa]
     'belt_thickness',           0.015, ...  % [m]
     'sidewall_deflection',      0.15,  ...  % [m]
-    'reference_vertical_load',  4500   ...  % [N] ≈ 1820*9.81/4
+    'reference_vertical_load',  4500   ...  % [N]
 );
 
-
-% 2) vehicleParams (필요하면 사용)
+% ─────────────────────────────────────────────
+% 4) Vehicle Parameters Calculation
+%    - vehi_param.m 내부에서 기준점을 뒷바퀴 중심으로 변환함
+%    - vehicleParams.a = L (Wheelbase)
+%    - vehicleParams.b = 0
+% ─────────────────────────────────────────────
 vehicleParams = vehi_param(rosParams, tireParams, assumptions);
 
-% 3) 차량/조향 관련 파라미터만 정의 (MPC 파라미터 X)
+% ─────────────────────────────────────────────
+% 5) Simulation / Initial State
+% ─────────────────────────────────────────────
 L         = rosParams.wheel_base;  % 휠베이스 [m]
-delta_max = deg2rad(27);           % 최대 조향 각 [rad]
+delta_max = deg2rad(30);           % [수정] 최대 조향각 (물리적 한계 30도까지 해제)
+a_max     = 2.0;                   % 최대 가감속 [m/s^2]
 
-% 4) 초기 상태 / 가감속 제약 (vehicle 쪽이라 여기 둬도 됨)
-a_max = 2.0;   % 최대 가감속 [m/s^2]
+% 초기 상태 (Simulink Integrator 초기값용)
 v0    = 3.0;   % 초기 속도 [m/s]
-x0    = 0;
-y0    = 0;
-psi0  = 0;
+x0    = 0;     % 초기 X [m] (뒷바퀴 중심 기준)
+y0    = 0;     % 초기 Y [m] (뒷바퀴 중심 기준)
+psi0  = 0;     % 초기 헤딩 [rad]
 
-Ts = 0.05;
+% ─────────────────────────────────────────────
+% 6) Default MPC Parameters (최적화 결과 반영)
+%    - 베이지안 최적화를 안 돌리고 그냥 Simulink만 실행할 때 사용될 기본값
+% ─────────────────────────────────────────────
+Ts = 0.05;   % [s] 샘플링 타임
 
+% [최적화 결과 기반 추천값]
+% Qy가 크고 Rdelta가 작아야 경로에 잘 붙음
+Qy     = 1;    
+Qpsi   = 1;      
+Rdelta = 1;    
 
-Qy = 1;
-Qpsi = 1;
-Rdelta = 1;
-Np = 1;
-Nc = 1;
-dmax_deg = 2.0;
+% [반응성 설정]
+Np = 30;          % Horizon (단기 반응성 강화)
+Nc = 5;          % Control Horizon
+dmax_deg = 7.0;  % [deg/step] 조향 변화율 제한 해제 (빠른 핸들링)
 
-
-% 이 스크립트를 실행하면 base workspace에
-% rosParams, tireParams, assumptions, vehicleParams,
-% L, delta_max, a_max, v0, x0, y0, psi0
-% 가 생기고, Simulink와 MPC 코드에서 참조 가능
+% ─────────────────────────────────────────────
+% workspace 확인용 메시지
+fprintf('Initialized Vehicle Params (Rear Axle Reference).\n');
+fprintf('  - L (Wheelbase): %.3f m\n', L);
+fprintf('  - Mass: %.1f kg\n', vehicleParams.m);
+fprintf('  - MPC Default: Np=%d, dmax=%.1f deg\n', Np, dmax_deg);
